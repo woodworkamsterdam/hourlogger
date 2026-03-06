@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Woodwork — Hour Logger</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: #222222;
+    --border-bright: #333333;
+    --text: #e8e8e8;
+    --text-dim: #555555;
+    --text-mid: #888888;
+    --accent: #cc0000;
+    --accent-dim: rgba(204,0,0,0.08);
+    --accent-mid: rgba(204,0,0,0.18);
+    --red: #ff4444;
+    --orange: #ff8c00;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(10,10,10,0.95);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+  }
+
+  .logo svg {
+    height: 18px;
+    width: auto;
+    fill: var(--text-dim);
+    display: block;
+  }
+
+  #live-clock {
+    font-size: 22px;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  #live-date {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-align: right;
+    letter-spacing: 0.12em;
+    margin-top: 2px;
+  }
+
+  /* MAIN LAYOUT */
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  /* NAME SELECTOR */
+  #name-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    gap: 40px;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .name-title {
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .name-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    max-width: 500px;
+  }
+
+  .name-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    padding: 14px 28px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.15s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .name-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent-dim);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .name-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .name-btn:hover::after { opacity: 1; }
+
+  /* TRACKER SCREEN */
+  #tracker-screen {
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Top bar */
+  .tracker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+  }
+
+  .greeting {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .greeting strong {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .btn-small {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-mid);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-small:hover {
+    border-color: var(--text-mid);
+    color: var(--text);
+  }
+
+  .btn-small.danger:hover {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .btn-eod {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 8px 18px;
+    border: 1px solid var(--accent);
+    background: var(--accent-dim);
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-eod:hover {
+    background: var(--accent-mid);
+  }
+
+  /* PROJECT GRID */
+  .section-label {
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .project-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 40px;
+  }
+
+  .project-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px 18px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .project-tile::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.2s ease;
+  }
+
+  .project-tile:hover {
+    border-color: var(--border-bright);
+    background: var(--surface2);
+  }
+
+  .project-tile:hover::before {
+    transform: scaleX(0.4);
+  }
+
+  .project-tile.active {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    box-shadow: 0 0 20px rgba(204,0,0,0.06), inset 0 0 20px rgba(204,0,0,0.03);
+  }
+
+  .project-tile.active::before {
+    transform: scaleX(1);
+  }
+
+  .project-tile.active .project-name {
+    color: var(--accent);
+  }
+
+  .project-name {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    margin-bottom: 12px;
+    line-height: 1.3;
+  }
+
+  .project-time {
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--text-mid);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  .project-tile.active .project-time {
+    color: var(--accent);
+  }
+
+  .project-status {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  .project-tile.active .project-status {
+    color: var(--accent);
+  }
+
+  /* Pulse dot */
+  .pulse-dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-right: 6px;
+    animation: pulse 1.2s ease-in-out infinite;
+    vertical-align: middle;
+    margin-bottom: 1px;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* NOTE PANEL */
+  #note-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 18px 20px;
+    margin-bottom: 32px;
+    display: none;
+    animation: fadeIn 0.2s ease;
+  }
+
+  #note-panel .panel-label {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  #note-panel .panel-project {
+    color: var(--accent);
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+
+  #note-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 10px 14px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.15s;
+    height: 60px;
+  }
+
+  #note-input:focus {
+    border-color: var(--border-bright);
+  }
+
+  #note-input::placeholder { color: var(--text-dim); }
+
+  .task-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .task-preset-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-mid);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .task-preset-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .task-preset-btn.selected {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    justify-content: flex-end;
+  }
+
+  /* TIMELINE */
+  .timeline {
+    margin-bottom: 40px;
+  }
+
+  #timeline-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .timeline-entry {
+    display: grid;
+    grid-template-columns: 120px 140px 1fr;
+    gap: 16px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    align-items: start;
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-6px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .tl-time { color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .tl-project { color: var(--text); font-weight: 500; }
+  .tl-note { color: var(--text-mid); font-family: 'IBM Plex Sans', sans-serif; }
+
+  .empty-timeline {
+    color: var(--text-dim);
+    font-size: 11px;
+    padding: 20px 0;
+    letter-spacing: 0.1em;
+  }
+
+  /* EOD SUMMARY */
+  #summary-screen {
+    display: none;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .summary-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+    margin-bottom: 32px;
+  }
+
+  .summary-title {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .summary-name {
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+
+  .summary-date {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    letter-spacing: 0.1em;
+  }
+
+  .summary-projects {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-bottom: 40px;
+  }
+
+  .summary-project {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px 22px;
+  }
+
+  .sp-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .sp-total {
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 14px;
+  }
+
+  .sp-sessions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sp-session {
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    gap: 16px;
+  }
+
+  .sp-session-time { min-width: 110px; font-variant-numeric: tabular-nums; }
+  .sp-session-note { color: var(--text-mid); font-family: 'IBM Plex Sans', sans-serif; }
+
+  .summary-total-bar {
+    border-top: 1px solid var(--accent);
+    padding-top: 20px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  .total-label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .total-value {
+    font-size: 32px;
+    font-weight: 300;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .summary-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 12px 24px;
+    border: 1px solid var(--accent);
+    background: var(--accent-dim);
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-primary:hover { background: var(--accent-mid); }
+
+  .btn-secondary {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 12px 24px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-mid);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--text-mid);
+    color: var(--text);
+  }
+
+  /* EOD auto notification */
+  .eod-toast {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    padding: 16px 22px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    display: none;
+    animation: fadeIn 0.3s ease;
+    z-index: 200;
+  }
+
+  /* GIF STRIP */
+  .gif-strip {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 120px;
+    display: flex;
+    gap: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.35;
+    mask-image: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+  }
+
+  .gif-strip iframe {
+    height: 120px;
+    width: 200px;
+    flex-shrink: 0;
+    border: none;
+    pointer-events: none;
+  }
+
+  /* GIF in active tile */
+  .gif-corner {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 160px;
+    height: 100px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: 50;
+    pointer-events: none;
+  }
+
+  .gif-corner.visible { opacity: 0.6; }
+
+  .gif-corner iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    pointer-events: none;
+    display: block;
+  }
+
+  .gif-corner-label {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.7);
+    font-size: 8px;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    padding: 4px 8px;
+    text-transform: uppercase;
+  }
+
+  /* EOD summary GIF */
+  .summary-gif {
+    width: 100%;
+    max-height: 200px;
+    overflow: hidden;
+    margin-bottom: 28px;
+    border: 1px solid var(--border);
+  }
+
+  .summary-gif iframe {
+    width: 100%;
+    height: 200px;
+    border: none;
+    display: block;
+  }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 220.6">
+      <path d="M415.66,12.77c-13.77-6.81-30.27-10.22-49.51-10.22-26.48,0-48.92,6.1-67.3,18.29-18.39,12.2-32.15,27.92-41.3,47.16-9.14,19.24-13.72,39.39-13.72,60.45,0,18.77,3.69,34.7,11.08,47.8,7.38,13.1,17.93,23.05,31.65,29.86,13.72,6.81,30.2,10.22,49.44,10.22,26.48,0,48.94-6.1,67.38-18.29,18.43-12.19,32.2-27.91,41.3-47.16,9.1-19.24,13.65-39.39,13.65-60.45,0-18.77-3.67-34.7-11-47.8-7.34-13.1-17.89-23.05-31.65-29.86M410.16,134.94c-5.91,14.05-14.89,25.7-26.94,34.94-12.05,9.24-26.65,13.86-43.8,13.86-11.81,0-21.93-2.21-30.36-6.64-8.43-4.43-14.86-10.95-19.29-19.58-4.43-8.62-6.64-18.98-6.64-31.08,0-14.29,2.97-28.46,8.93-42.51,5.95-14.05,14.93-25.7,26.94-34.94,12-9.24,26.58-13.86,43.73-13.86,11.81,0,21.96,2.21,30.44,6.65,8.48,4.43,14.91,10.96,19.29,19.58,4.38,8.62,6.57,18.98,6.57,31.08,0,14.29-2.96,28.46-8.86,42.51"/>
+      <path d="M637.86,12.77c-13.77-6.81-30.27-10.22-49.51-10.22-26.48,0-48.92,6.1-67.3,18.29-18.39,12.2-32.15,27.92-41.3,47.16-9.15,19.24-13.72,39.39-13.72,60.45,0,18.77,3.69,34.7,11.08,47.8,7.38,13.1,17.93,23.05,31.65,29.86,13.72,6.81,30.2,10.22,49.44,10.22,26.48,0,48.94-6.1,67.38-18.29,18.43-12.19,32.2-27.91,41.3-47.16,9.1-19.24,13.65-39.39,13.65-60.45,0-18.77-3.67-34.7-11-47.8-7.34-13.1-17.89-23.05-31.65-29.86M632.36,134.94c-5.91,14.05-14.89,25.7-26.94,34.94-12.05,9.24-26.65,13.86-43.8,13.86-11.81,0-21.93-2.21-30.36-6.64-8.43-4.43-14.86-10.95-19.29-19.58-4.43-8.62-6.64-18.98-6.64-31.08,0-14.29,2.97-28.46,8.93-42.51,5.95-14.05,14.93-25.7,26.94-34.94,12-9.24,26.58-13.86,43.73-13.86,11.81,0,21.96,2.21,30.44,6.65,8.48,4.43,14.91,10.96,19.29,19.58,4.38,8.62,6.57,18.98,6.57,31.08,0,14.29-2.96,28.46-8.86,42.51"/>
+      <path d="M828.27,18.98c-15.82-8.29-34.25-12.43-55.3-12.43h-80.31v205.77h80.31c21.05,0,39.49-4.14,55.3-12.43,15.81-8.29,28.03-20.2,36.65-35.72,8.62-15.53,12.93-33.77,12.93-54.73s-4.31-39.2-12.93-54.73c-8.62-15.53-20.84-27.44-36.65-35.72M830.34,147.95c-5.57,10.53-13.43,18.46-23.58,23.79-10.15,5.34-21.89,8-35.22,8h-40.15V39.13h40.15c13.34,0,25.08,2.67,35.22,8,10.15,5.34,18.01,13.27,23.58,23.79,5.57,10.53,8.36,23.36,8.36,38.51s-2.79,27.99-8.36,38.51"/>
+      <path d="M1311.9,12.77c-13.77-6.81-30.27-10.22-49.51-10.22-26.48,0-48.92,6.1-67.3,18.29-18.39,12.2-32.15,27.92-41.3,47.16-9.14,19.24-13.72,39.39-13.72,60.45,0,18.77,3.69,34.7,11.08,47.8,7.38,13.1,17.93,23.05,31.65,29.86,13.72,6.81,30.2,10.22,49.44,10.22,26.48,0,48.94-6.1,67.38-18.29,18.43-12.19,32.2-27.91,41.3-47.16,9.1-19.24,13.65-39.39,13.65-60.45,0-18.77-3.67-34.7-11-47.8-7.34-13.1-17.89-23.05-31.65-29.86M1306.4,134.94c-5.91,14.05-14.89,25.7-26.94,34.94-12.05,9.24-26.65,13.86-43.8,13.86-11.81,0-21.93-2.21-30.36-6.64-8.43-4.43-14.86-10.95-19.29-19.58-4.43-8.62-6.64-18.98-6.64-31.08,0-14.29,2.97-28.46,8.93-42.51,5.95-14.05,14.93-25.7,26.94-34.94,12-9.24,26.58-13.86,43.73-13.86,11.81,0,21.96,2.21,30.44,6.65,8.48,4.43,14.91,10.96,19.29,19.58,4.38,8.62,6.57,18.98,6.57,31.08,0,14.29-2.96,28.46-8.86,42.51"/>
+      <path d="M1470.73,126.73c11.62,0,22.12-2.31,31.51-6.93,9.38-4.62,16.81-11.43,22.29-20.43,5.48-9,8.22-19.84,8.22-32.51s-2.93-23.7-8.79-32.79c-5.86-9.1-13.81-15.96-23.86-20.58-10.05-4.62-21.36-6.93-33.94-6.93h-99.46v205.77h38.15v-86.17h2.86l82.31,86.17h43.3v-4.29l-79.01-81.31h16.42ZM1404.86,97.29v-59.16h55.44c6.95,0,13.02,1.14,18.22,3.43,5.19,2.29,9.26,5.62,12.22,10,2.95,4.38,4.43,9.77,4.43,16.15s-1.48,11.79-4.43,16.22c-2.96,4.43-7.03,7.77-12.22,10-5.19,2.24-11.27,3.36-18.22,3.36h-55.44Z"/>
+      <polygon points="1724.52 10.84 1724.52 6.55 1679.65 6.55 1590.62 91.29 1588.34 91.29 1588.34 6.55 1549.9 6.55 1549.9 212.32 1588.34 212.32 1588.34 125.73 1590.62 125.73 1679.79 212.32 1727.09 212.32 1727.09 208.03 1622.49 107.01 1724.52 10.84"/>
+      <path d="M1904.92,54.28c-8.62-16.1-20.84-28.65-36.65-37.65-15.81-9-34.15-13.5-55.02-13.5s-39.2,4.5-55.02,13.5c-15.81,9-28.03,21.56-36.65,37.65-8.62,16.1-12.93,34.49-12.93,55.16s4.31,39.06,12.93,55.16c8.62,16.1,20.84,28.65,36.65,37.65,15.81,9,34.15,13.5,55.02,13.5s39.2-4.5,55.02-13.5c15.81-9,28.03-21.55,36.65-37.65,8.62-16.1,12.93-34.48,12.93-55.16s-4.31-39.06-12.93-55.16M1893.77,158.09c-7.48,14.24-18.15,25.36-32.01,33.37-13.86,8-30.03,12-48.51,12s-34.65-4-48.51-12c-13.86-8-24.53-19.12-32.01-33.37-7.48-14.24-11.22-30.46-11.22-48.66s3.74-34.41,11.22-48.66c7.48-14.24,18.15-25.36,32.01-33.37,13.86-8,30.03-12,48.51-12s34.65,4,48.51,12c13.86,8,24.53,19.13,32.01,33.37,7.48,14.24,11.22,30.46,11.22,48.66s-3.74,34.41-11.22,48.66"/>
+      <path d="M1843.69,141.73c-2.29,4.29-5.77,7.74-10.43,10.36-4.67,2.62-10.57,3.93-17.72,3.93-11.62,0-20.77-4-27.44-12-6.67-8-10-19.62-10-34.87,0-10.19,1.52-18.79,4.57-25.79,3.05-7,7.36-12.26,12.93-15.79,5.57-3.52,12.22-5.29,19.93-5.29,10.57,0,18.41,2.57,23.51,7.72,5.1,5.14,7.93,11.81,8.5,20.01h12.29v-2.29c-.38-6.86-2.24-13.12-5.57-18.79-3.34-5.67-8.24-10.24-14.72-13.72-6.48-3.48-14.48-5.22-24.01-5.22-10,0-18.79,2.24-26.36,6.72-7.57,4.48-13.46,11.15-17.65,20.01-4.19,8.86-6.29,19.67-6.29,32.44s2.09,23.58,6.29,32.44c4.19,8.86,10.07,15.53,17.65,20.01,7.57,4.48,16.36,6.72,26.36,6.72,9.43,0,17.41-1.88,23.94-5.64,6.52-3.76,11.48-8.57,14.86-14.43,3.38-5.86,5.31-11.98,5.79-18.36v-2.29h-12.29c-.48,5.14-1.86,9.86-4.14,14.15"/>
+      <polygon points="195.47 149.67 193.18 149.67 132.02 6.77 95.44 6.77 34.28 149.67 31.99 149.67 31.99 6.77 -3.16 6.77 -3.16 212.54 41.71 212.54 112.16 47.78 114.44 47.78 185.03 212.54 230.76 212.54 230.76 6.77 195.47 6.77 195.47 149.67"/>
+      <polygon points="1090.2 149.35 1087.92 149.35 1026.75 6.46 990.17 6.46 929.01 149.35 926.73 149.35 926.73 6.46 891.57 6.46 891.57 212.23 936.44 212.23 1006.89 47.47 1009.18 47.47 1079.77 212.23 1125.5 212.23 1125.5 6.46 1090.2 6.46 1090.2 149.35"/>
+    </svg>
+  </div>
+  <div>
+    <div id="live-clock">00:00:00</div>
+    <div id="live-date">—</div>
+  </div>
+</header>
+
+<!-- NAME SELECTION -->
+<div id="name-screen">
+  <div class="name-title">Who are you?</div>
+  <div class="name-grid" id="name-grid"></div>
+  <div class="gif-strip" id="gif-strip"></div>
+</div>
+
+<!-- TRACKER -->
+<main>
+  <div id="tracker-screen">
+    <div class="tracker-header">
+      <div class="greeting">Logging as <strong id="display-name">—</strong></div>
+      <div class="header-actions">
+        <button class="btn-small danger" onclick="switchUser()">Switch</button>
+        <button class="btn-eod" onclick="endDay()">End Day ↗</button>
+      </div>
+    </div>
+
+    <div class="section-label">Projects</div>
+    <div class="project-grid" id="project-grid"></div>
+
+    <div id="note-panel">
+      <div class="panel-label">What are you working on?</div>
+      <div class="panel-project" id="note-panel-project">—</div>
+      <div class="task-presets" id="task-presets"></div>
+      <textarea id="note-input" placeholder="or type a custom note..."></textarea>
+      <div class="note-actions">
+        <button class="btn-small" onclick="saveNote()">Save note</button>
+      </div>
+    </div>
+
+    <div class="timeline">
+      <div class="section-label">Today's log</div>
+      <div id="timeline-entries"><div class="empty-timeline">// no sessions logged yet</div></div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div id="summary-screen">
+    <div class="summary-gif" id="summary-gif" style="display:none"></div>
+    <div class="summary-header">
+      <div class="summary-title">End of Day Summary</div>
+      <div class="summary-name" id="summary-name">—</div>
+      <div class="summary-date" id="summary-date">—</div>
+    </div>
+    <div class="summary-projects" id="summary-projects"></div>
+    <div class="summary-total-bar">
+      <div class="total-label">Total logged</div>
+      <div class="total-value" id="summary-total">0:00</div>
+    </div>
+    <div class="summary-actions">
+      <a id="email-btn" class="btn-primary" href="#">Email Summary ↗</a>
+      <button class="btn-secondary" onclick="exportExcel()">Export Excel ↓</button>
+      <button class="btn-secondary" onclick="printSummary()">Print / PDF</button>
+      <button class="btn-secondary" onclick="newDay()">New Day</button>
+    </div>
+  </div>
+</main>
+
+<div class="eod-toast" id="eod-toast">// 18:00 — end of day reached</div>
+
+<!-- GIF corner (shown while recording) -->
+<div class="gif-corner" id="gif-corner">
+  <div class="gif-corner-label" id="gif-corner-label">recording</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ─── GIFS ─────────────────────────────────────────────────────────────────────
+// Using Giphy IDs — rendered as iframes which Giphy officially supports for embedding
+const GIFS_STRIP = [
+  'KQfFDJlMjE2nhdgpQ1',  // winter animation loop
+  '2UxWBIttMvvIJ55hTe',  // space travel
+  '65Tr7aW4HJYdCHN082',  // deep space
+  'vaiL8rQ5x22KRConmu',  // glow b&w eye
+  'MaThe6p8WAKbf9NDDM',  // warp speed stars
+  '3htQ6tCfZ3qfv4sXk6',  // hd visuals
+  '1P1oZHckyd8FazbDxu',  // trapcode tao
+  'U5OgQSxhzjR1t4McGc',  // sci-fi design
+];
+
+const GIFS_RECORDING = [
+  '4d4S0UNALsUmQ5cf6t',  // log your time (the one you shared)
+  'QBvHYx6taXPwCHqTRR',  // mocion loop glitch alien
+  'KVZWZQoS0yqfIiTAKq',  // art design loop
+  'h3o35RC5wCdXl0Bjoc',  // glow cats eye
+  'VPTCIp6nZtsEyLsGET',  // pop up windows
+  '11j5OF7BTglVkc',      // easing sci-fi
+];
+
+const GIFS_EOD = [
+  'S6Zkp9xLYgiSNjt7nt',  // elevation motion design
+  'YrV289VE6hcuGc04Oy',  // animation text typography
+  'RgzbyUh33mXSkUKOxV',  // motionartsmedia
+  'DE2SPf5htCh36CU82c',  // loop rain xponential
+];
+
+function giphyEmbedUrl(id) {
+  return `https://giphy.com/embed/${id}`;
+}
+
+function randomGif(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function buildGifStrip() {
+  const strip = document.getElementById('gif-strip');
+  if (!strip) return;
+  strip.innerHTML = '';
+  const ids = [...GIFS_STRIP, ...GIFS_STRIP];
+  ids.forEach(id => {
+    const iframe = document.createElement('iframe');
+    iframe.src = giphyEmbedUrl(id);
+    iframe.width = '200';
+    iframe.height = '120';
+    iframe.frameBorder = '0';
+    iframe.allowFullscreen = false;
+    iframe.style.cssText = 'pointer-events:none; flex-shrink:0; border:none;';
+    strip.appendChild(iframe);
+  });
+}
+
+function showRecordingGif(project) {
+  const corner = document.getElementById('gif-corner');
+  const label = document.getElementById('gif-corner-label');
+  const id = randomGif(GIFS_RECORDING);
+  // Replace iframe to force reload
+  const existing = corner.querySelector('iframe');
+  if (existing) existing.remove();
+  const iframe = document.createElement('iframe');
+  iframe.src = giphyEmbedUrl(id);
+  iframe.frameBorder = '0';
+  iframe.style.cssText = 'width:100%; height:100%; border:none; pointer-events:none;';
+  corner.insertBefore(iframe, label);
+  label.textContent = project;
+  corner.classList.add('visible');
+}
+
+function hideRecordingGif() {
+  document.getElementById('gif-corner').classList.remove('visible');
+}
+
+function showSummaryGif() {
+  const wrap = document.getElementById('summary-gif');
+  const id = randomGif(GIFS_EOD);
+  wrap.innerHTML = `<iframe src="${giphyEmbedUrl(id)}" width="100%" height="200" frameBorder="0" style="border:none; display:block;" allowFullScreen></iframe>`;
+  wrap.style.display = 'block';
+}
+
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const TEAM = ['Marvin', 'Nina', 'Roberto', 'Hidde', 'Alex', 'Alessandro', 'Susan'];
+const PROJECTS = ['Tonnenloods', 'Formula 1 Abu Dhabi', 'Adyen', 'DNA Vincent', 'Moodlogger', 'Studio / Admin'];
+const STUDIO_EMAIL = 'studio@woodworkamsterdam.com';
+const TASKS = ['Concepting', 'Storyboarding', 'Designing', 'Meeting', 'Animating', 'Compositing', 'Music', 'VO'];
+const STORAGE_KEY = 'ww_hours_v1';
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let state = {
+  user: null,
+  date: todayStr(),
+  activeProject: null,
+  sessionStart: null,
+  sessions: [], // { project, start, end, duration, note }
+  projectTotals: {}, // project -> ms
+  pendingNote: null,
+  eodFired: false
+};
+
+function todayStr() {
+  return new Date().toLocaleDateString('en-NL', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
+// ─── PERSISTENCE ──────────────────────────────────────────────────────────────
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+  const saved = JSON.parse(raw);
+  if (saved.date !== todayStr()) {
+    // New day — clear everything
+    localStorage.removeItem(STORAGE_KEY);
+    return;
+  }
+  state = { ...state, ...saved };
+  // Re-hydrate sessions with Date objects
+  state.sessions = state.sessions.map(s => ({
+    ...s,
+    start: new Date(s.start),
+    end: s.end ? new Date(s.end) : null
+  }));
+  if (state.sessionStart) state.sessionStart = new Date(state.sessionStart);
+}
+
+// ─── CLOCK ────────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('live-clock').textContent =
+    now.toLocaleTimeString('en-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  document.getElementById('live-date').textContent =
+    now.toLocaleDateString('en-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+
+  // EOD at 18:00
+  if (now.getHours() === 18 && now.getMinutes() === 0 && !state.eodFired && state.user) {
+    state.eodFired = true;
+    saveState();
+    showEodToast();
+    setTimeout(() => endDay(), 3000);
+  }
+
+  // Update live tile
+  if (state.activeProject && state.sessionStart) {
+    const elapsed = Date.now() - state.sessionStart.getTime();
+    const totalMs = (state.projectTotals[state.activeProject] || 0) + elapsed;
+    const tile = document.querySelector(`.project-tile[data-project="${state.activeProject}"]`);
+    if (tile) {
+      tile.querySelector('.project-time').textContent = formatDuration(totalMs);
+    }
+  }
+}
+
+function formatDuration(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}:${pad(m)}:${pad(sec)}`;
+  return `${m}:${pad(sec)}`;
+}
+
+function formatDurationShort(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function fmtTime(d) {
+  return d.toLocaleTimeString('en-NL', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+loadState();
+buildNameGrid();
+buildGifStrip();
+setInterval(updateClock, 1000);
+updateClock();
+
+if (state.user) {
+  showTracker();
+}
+
+function buildNameGrid() {
+  const grid = document.getElementById('name-grid');
+  TEAM.forEach(name => {
+    const btn = document.createElement('button');
+    btn.className = 'name-btn';
+    btn.textContent = name;
+    btn.onclick = () => selectUser(name);
+    grid.appendChild(btn);
+  });
+}
+
+function selectUser(name) {
+  state.user = name;
+  saveState();
+  showTracker();
+}
+
+function showTracker() {
+  document.getElementById('name-screen').style.display = 'none';
+  document.getElementById('tracker-screen').style.display = 'block';
+  document.getElementById('summary-screen').style.display = 'none';
+  document.getElementById('display-name').textContent = state.user;
+  buildProjectGrid();
+  renderTimeline();
+}
+
+function switchUser() {
+  // Stop any running timer
+  if (state.activeProject) stopCurrentSession();
+  state.user = null;
+  state.activeProject = null;
+  state.sessionStart = null;
+  saveState();
+  document.getElementById('name-screen').style.display = 'flex';
+  document.getElementById('tracker-screen').style.display = 'none';
+}
+
+function buildProjectGrid() {
+  const grid = document.getElementById('project-grid');
+  grid.innerHTML = '';
+  PROJECTS.forEach(project => {
+    const tile = document.createElement('div');
+    tile.className = 'project-tile' + (state.activeProject === project ? ' active' : '');
+    tile.dataset.project = project;
+    const total = state.projectTotals[project] || 0;
+    const isActive = state.activeProject === project;
+    const elapsed = isActive && state.sessionStart ? Date.now() - state.sessionStart.getTime() : 0;
+
+    tile.innerHTML = `
+      <div class="project-name">${project}</div>
+      <div class="project-time">${formatDuration(total + elapsed)}</div>
+      <div class="project-status">${isActive ? '<span class="pulse-dot"></span> recording' : '—'}</div>
+    `;
+    tile.onclick = () => toggleProject(project);
+    grid.appendChild(tile);
+  });
+}
+
+// ─── PROJECT TOGGLE ───────────────────────────────────────────────────────────
+function toggleProject(project) {
+  if (state.activeProject === project) {
+    // Pause / stop same project
+    stopCurrentSession();
+    showNotePanel(project);
+  } else {
+    if (state.activeProject) {
+      stopCurrentSession();
+      showNotePanel(state.activeProject);
+    }
+    startSession(project);
+  }
+  saveState();
+  buildProjectGrid();
+}
+
+function startSession(project) {
+  state.activeProject = project;
+  state.sessionStart = new Date();
+  showRecordingGif(project);
+}
+
+function stopCurrentSession() {
+  if (!state.activeProject || !state.sessionStart) return;
+  const end = new Date();
+  const duration = end.getTime() - state.sessionStart.getTime();
+  state.projectTotals[state.activeProject] = (state.projectTotals[state.activeProject] || 0) + duration;
+
+  // Push session (note added later)
+  state.sessions.push({
+    project: state.activeProject,
+    start: state.sessionStart,
+    end: end,
+    duration: duration,
+    note: ''
+  });
+
+  state.pendingNote = state.sessions.length - 1;
+  state.activeProject = null;
+  state.sessionStart = null;
+  hideRecordingGif();
+  renderTimeline();
+}
+
+// ─── NOTE PANEL ───────────────────────────────────────────────────────────────
+function showNotePanel(project) {
+  const panel = document.getElementById('note-panel');
+  document.getElementById('note-panel-project').textContent = '↳ ' + project;
+  document.getElementById('note-input').value = '';
+
+  // Build task preset buttons
+  const presetsEl = document.getElementById('task-presets');
+  presetsEl.innerHTML = '';
+  TASKS.forEach(task => {
+    const btn = document.createElement('button');
+    btn.className = 'task-preset-btn';
+    btn.textContent = task;
+    btn.onclick = () => {
+      // Toggle selection
+      const isSelected = btn.classList.contains('selected');
+      // Deselect all
+      presetsEl.querySelectorAll('.task-preset-btn').forEach(b => b.classList.remove('selected'));
+      if (!isSelected) {
+        btn.classList.add('selected');
+        document.getElementById('note-input').value = task;
+      } else {
+        document.getElementById('note-input').value = '';
+      }
+    };
+    presetsEl.appendChild(btn);
+  });
+
+  panel.style.display = 'block';
+  document.getElementById('note-input').focus();
+}
+
+function saveNote() {
+  const note = document.getElementById('note-input').value.trim();
+  if (state.pendingNote !== null && state.sessions[state.pendingNote] !== undefined) {
+    state.sessions[state.pendingNote].note = note;
+    state.pendingNote = null;
+  }
+  document.getElementById('note-panel').style.display = 'none';
+  saveState();
+  renderTimeline();
+}
+
+// ─── TIMELINE ─────────────────────────────────────────────────────────────────
+function renderTimeline() {
+  const container = document.getElementById('timeline-entries');
+  if (state.sessions.length === 0) {
+    container.innerHTML = '<div class="empty-timeline">// no sessions logged yet</div>';
+    return;
+  }
+  container.innerHTML = state.sessions.map(s => `
+    <div class="timeline-entry">
+      <div class="tl-time">${fmtTime(new Date(s.start))}–${fmtTime(new Date(s.end))}</div>
+      <div class="tl-project">${s.project}</div>
+      <div class="tl-note">${s.note || '<span style="color:var(--border-bright)">—</span>'}</div>
+    </div>
+  `).reverse().join('');
+}
+
+// ─── EOD SUMMARY ──────────────────────────────────────────────────────────────
+function showEodToast() {
+  const t = document.getElementById('eod-toast');
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 4000);
+}
+
+function endDay() {
+  if (state.activeProject) stopCurrentSession();
+  buildSummary();
+  showSummaryGif();
+  document.getElementById('tracker-screen').style.display = 'none';
+  document.getElementById('summary-screen').style.display = 'block';
+}
+
+function buildSummary() {
+  const now = new Date();
+  document.getElementById('summary-name').textContent = state.user;
+  document.getElementById('summary-date').textContent =
+    now.toLocaleDateString('en-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+
+  // Group by project
+  const byProject = {};
+  state.sessions.forEach(s => {
+    if (!byProject[s.project]) byProject[s.project] = { total: 0, sessions: [] };
+    byProject[s.project].total += s.duration;
+    byProject[s.project].sessions.push(s);
+  });
+
+  let grandTotal = 0;
+  const projectsHtml = Object.entries(byProject).map(([proj, data]) => {
+    grandTotal += data.total;
+    const sessionsHtml = data.sessions.map(s => `
+      <div class="sp-session">
+        <div class="sp-session-time">${fmtTime(new Date(s.start))}–${fmtTime(new Date(s.end))}</div>
+        <div class="sp-session-note">${s.note || '—'}</div>
+      </div>
+    `).join('');
+    return `
+      <div class="summary-project">
+        <div class="sp-name">${proj}</div>
+        <div class="sp-total">${formatDurationShort(data.total)}</div>
+        <div class="sp-sessions">${sessionsHtml}</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('summary-projects').innerHTML = projectsHtml;
+  document.getElementById('summary-total').textContent = formatDurationShort(grandTotal);
+
+  // Build email
+  const emailBody = buildEmailBody(byProject, grandTotal, now);
+  const subject = `Hours ${state.user} — ${now.toLocaleDateString('en-NL', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+  document.getElementById('email-btn').href = `mailto:${STUDIO_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+}
+
+function buildEmailBody(byProject, grandTotal, date) {
+  const dateStr = date.toLocaleDateString('en-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  let body = `WOODWORK AMSTERDAM — HOUR LOG\n`;
+  body += `${state.user} · ${dateStr}\n`;
+  body += `${'─'.repeat(40)}\n\n`;
+
+  Object.entries(byProject).forEach(([proj, data]) => {
+    body += `${proj.toUpperCase()}\n`;
+    body += `Total: ${formatDurationShort(data.total)}\n`;
+    data.sessions.forEach(s => {
+      const t = `  ${fmtTime(new Date(s.start))}–${fmtTime(new Date(s.end))}`;
+      body += `${t}${s.note ? '  ·  ' + s.note : ''}\n`;
+    });
+    body += '\n';
+  });
+
+  body += `${'─'.repeat(40)}\n`;
+  body += `TOTAL: ${formatDurationShort(grandTotal)}\n`;
+  return body;
+}
+
+function exportExcel() {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-NL', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
+  const wb = XLSX.utils.book_new();
+
+  // ── Sheet 1: Session log ──────────────────────────────────────────────────
+  const logRows = [
+    ['Date', 'Person', 'Project', 'Start', 'End', 'Duration (min)', 'Task / Note']
+  ];
+  state.sessions.forEach(s => {
+    const start = new Date(s.start);
+    const end = new Date(s.end);
+    const mins = Math.round(s.duration / 60000);
+    logRows.push([
+      dateStr,
+      state.user,
+      s.project,
+      fmtTime(start),
+      fmtTime(end),
+      mins,
+      s.note || ''
+    ]);
+  });
+  const wsLog = XLSX.utils.aoa_to_sheet(logRows);
+  wsLog['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 22 }, { wch: 8 }, { wch: 8 }, { wch: 16 }, { wch: 36 }];
+  XLSX.utils.book_append_sheet(wb, wsLog, 'Session Log');
+
+  // ── Sheet 2: Summary per project ─────────────────────────────────────────
+  const byProject = {};
+  state.sessions.forEach(s => {
+    if (!byProject[s.project]) byProject[s.project] = { total: 0, sessions: [] };
+    byProject[s.project].total += s.duration;
+    byProject[s.project].sessions.push(s);
+  });
+
+  const summaryRows = [
+    ['Project', 'Total (h:mm)', 'Total (min)']
+  ];
+  let grandMins = 0;
+  Object.entries(byProject).forEach(([proj, data]) => {
+    const mins = Math.round(data.total / 60000);
+    grandMins += mins;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    summaryRows.push([proj, `${h}:${pad(m)}`, mins]);
+  });
+  summaryRows.push([]);
+  const grandH = Math.floor(grandMins / 60);
+  const grandM = grandMins % 60;
+  summaryRows.push(['TOTAL', `${grandH}:${pad(grandM)}`, grandMins]);
+
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+  wsSummary['!cols'] = [{ wch: 24 }, { wch: 14 }, { wch: 12 }];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+  XLSX.writeFile(wb, `WW_Hours_${state.user}_${dateStr}.xlsx`);
+}
+
+function printSummary() {
+  window.print();
+}
+
+function newDay() {
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+</script>
+</body>
+</html>
