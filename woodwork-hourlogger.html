@@ -518,16 +518,6 @@
   }
 
   .timeline-entry {
-    display: grid;
-    grid-template-columns: 120px 140px 1fr;
-    gap: 16px;
-    padding: 11px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    align-items: start;
-    animation: slideIn 0.2s ease;
-  }
-
   @keyframes slideIn {
     from { opacity: 0; transform: translateX(-6px); }
     to { opacity: 1; transform: translateX(0); }
@@ -702,82 +692,111 @@
     z-index: 200;
   }
 
-  /* GIF STRIP */
-  .gif-strip {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 120px;
+  /* TIMELINE EDIT */
+  .timeline-entry {
+    display: grid;
+    grid-template-columns: 120px 140px 1fr auto;
+    gap: 16px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    align-items: center;
+    animation: slideIn 0.2s ease;
+  }
+
+  .tl-actions {
     display: flex;
-    gap: 0;
-    overflow: hidden;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.35;
-    mask-image: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
-  }
-
-  .gif-strip iframe {
-    height: 120px;
-    width: 200px;
-    flex-shrink: 0;
-    border: none;
-    pointer-events: none;
-  }
-
-  /* GIF in active tile */
-  .gif-corner {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 160px;
-    height: 100px;
-    overflow: hidden;
-    border: 1px solid var(--border);
+    gap: 6px;
     opacity: 0;
-    transition: opacity 0.4s ease;
-    z-index: 50;
-    pointer-events: none;
+    transition: opacity 0.15s;
   }
 
-  .gif-corner.visible { opacity: 0.6; }
+  .timeline-entry:hover .tl-actions { opacity: 1; }
 
-  .gif-corner iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
-    pointer-events: none;
-    display: block;
-  }
-
-  .gif-corner-label {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    background: rgba(0,0,0,0.7);
-    font-size: 8px;
-    letter-spacing: 0.15em;
-    color: var(--accent);
-    padding: 4px 8px;
+  .tl-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-  }
-
-  /* EOD summary GIF */
-  .summary-gif {
-    width: 100%;
-    max-height: 200px;
-    overflow: hidden;
-    margin-bottom: 28px;
+    padding: 3px 8px;
     border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.12s;
   }
 
-  .summary-gif iframe {
-    width: 100%;
-    height: 200px;
-    border: none;
-    display: block;
+  .tl-btn:hover { border-color: var(--text-mid); color: var(--text); }
+  .tl-btn.del:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* EDIT MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.15s ease;
   }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    padding: 28px 28px 24px;
+    width: 420px;
+    max-width: 90vw;
+  }
+
+  .modal-title {
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .modal-field {
+    margin-bottom: 14px;
+  }
+
+  .modal-label {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .modal-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .modal-input:focus { border-color: var(--border-bright); }
+
+  .modal-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 14px;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--border-bright); }
@@ -834,7 +853,6 @@
 <div id="name-screen">
   <div class="name-title">Who are you?</div>
   <div class="name-grid" id="name-grid"></div>
-  <div class="gif-strip" id="gif-strip"></div>
 </div>
 
 <!-- TRACKER -->
@@ -869,7 +887,6 @@
 
   <!-- SUMMARY -->
   <div id="summary-screen">
-    <div class="summary-gif" id="summary-gif" style="display:none"></div>
     <div class="summary-header">
       <div class="summary-title">End of Day Summary</div>
       <div class="summary-name" id="summary-name">—</div>
@@ -890,11 +907,6 @@
 </main>
 
 <div class="eod-toast" id="eod-toast">// 18:00 — end of day reached</div>
-
-<!-- GIF corner (shown while recording) -->
-<div class="gif-corner" id="gif-corner">
-  <div class="gif-corner-label" id="gif-corner-label">recording</div>
-</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
@@ -933,92 +945,11 @@ function initAuth() {
   }
 }
 
-// ─── GIFS ─────────────────────────────────────────────────────────────────────
-// Using Giphy IDs — rendered as iframes which Giphy officially supports for embedding
-const GIFS_STRIP = [
-  'KQfFDJlMjE2nhdgpQ1',  // winter animation loop
-  '2UxWBIttMvvIJ55hTe',  // space travel
-  '65Tr7aW4HJYdCHN082',  // deep space
-  'vaiL8rQ5x22KRConmu',  // glow b&w eye
-  'MaThe6p8WAKbf9NDDM',  // warp speed stars
-  '3htQ6tCfZ3qfv4sXk6',  // hd visuals
-  '1P1oZHckyd8FazbDxu',  // trapcode tao
-  'U5OgQSxhzjR1t4McGc',  // sci-fi design
-];
-
-const GIFS_RECORDING = [
-  '4d4S0UNALsUmQ5cf6t',  // log your time (the one you shared)
-  'QBvHYx6taXPwCHqTRR',  // mocion loop glitch alien
-  'KVZWZQoS0yqfIiTAKq',  // art design loop
-  'h3o35RC5wCdXl0Bjoc',  // glow cats eye
-  'VPTCIp6nZtsEyLsGET',  // pop up windows
-  '11j5OF7BTglVkc',      // easing sci-fi
-];
-
-const GIFS_EOD = [
-  'S6Zkp9xLYgiSNjt7nt',  // elevation motion design
-  'YrV289VE6hcuGc04Oy',  // animation text typography
-  'RgzbyUh33mXSkUKOxV',  // motionartsmedia
-  'DE2SPf5htCh36CU82c',  // loop rain xponential
-];
-
-function giphyEmbedUrl(id) {
-  return `https://giphy.com/embed/${id}`;
-}
-
-function randomGif(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function buildGifStrip() {
-  const strip = document.getElementById('gif-strip');
-  if (!strip) return;
-  strip.innerHTML = '';
-  const ids = [...GIFS_STRIP, ...GIFS_STRIP];
-  ids.forEach(id => {
-    const iframe = document.createElement('iframe');
-    iframe.src = giphyEmbedUrl(id);
-    iframe.width = '200';
-    iframe.height = '120';
-    iframe.frameBorder = '0';
-    iframe.allowFullscreen = false;
-    iframe.style.cssText = 'pointer-events:none; flex-shrink:0; border:none;';
-    strip.appendChild(iframe);
-  });
-}
-
-function showRecordingGif(project) {
-  const corner = document.getElementById('gif-corner');
-  const label = document.getElementById('gif-corner-label');
-  const id = randomGif(GIFS_RECORDING);
-  // Replace iframe to force reload
-  const existing = corner.querySelector('iframe');
-  if (existing) existing.remove();
-  const iframe = document.createElement('iframe');
-  iframe.src = giphyEmbedUrl(id);
-  iframe.frameBorder = '0';
-  iframe.style.cssText = 'width:100%; height:100%; border:none; pointer-events:none;';
-  corner.insertBefore(iframe, label);
-  label.textContent = project;
-  corner.classList.add('visible');
-}
-
-function hideRecordingGif() {
-  document.getElementById('gif-corner').classList.remove('visible');
-}
-
-function showSummaryGif() {
-  const wrap = document.getElementById('summary-gif');
-  const id = randomGif(GIFS_EOD);
-  wrap.innerHTML = `<iframe src="${giphyEmbedUrl(id)}" width="100%" height="200" frameBorder="0" style="border:none; display:block;" allowFullScreen></iframe>`;
-  wrap.style.display = 'block';
-}
-
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const TEAM = ['Marvin', 'Nina', 'Roberto', 'Hidde', 'Alex', 'Alessandro', 'Susan'];
 const PROJECTS = ['Tonnenloods', 'Formula 1 Abu Dhabi', 'Adyen', 'DNA Vincent', 'Moodlogger', 'Studio / Admin'];
 const STUDIO_EMAIL = 'studio@woodworkamsterdam.com';
-const TASKS = ['Concepting', 'Storyboarding', 'Designing', 'Meeting', 'Animating', 'Compositing', 'Music', 'VO'];
+const TASKS = ['Concepting', 'Storyboarding', 'Designing', 'Meeting', 'Animating', 'Compositing', 'Music', 'VO', 'Production'];
 const STORAGE_KEY = 'ww_hours_v1';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
@@ -1114,7 +1045,6 @@ function fmtTime(d) {
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 loadState();
 buildNameGrid();
-buildGifStrip();
 setInterval(updateClock, 1000);
 updateClock();
 initAuth();
@@ -1201,7 +1131,6 @@ function toggleProject(project) {
 function startSession(project) {
   state.activeProject = project;
   state.sessionStart = new Date();
-  showRecordingGif(project);
 }
 
 function stopCurrentSession() {
@@ -1222,7 +1151,6 @@ function stopCurrentSession() {
   state.pendingNote = state.sessions.length - 1;
   state.activeProject = null;
   state.sessionStart = null;
-  hideRecordingGif();
   renderTimeline();
 }
 
@@ -1276,13 +1204,116 @@ function renderTimeline() {
     container.innerHTML = '<div class="empty-timeline">// no sessions logged yet</div>';
     return;
   }
-  container.innerHTML = state.sessions.map(s => `
+  container.innerHTML = state.sessions.map((s, i) => `
     <div class="timeline-entry">
       <div class="tl-time">${fmtTime(new Date(s.start))}–${fmtTime(new Date(s.end))}</div>
       <div class="tl-project">${s.project}</div>
       <div class="tl-note">${s.note || '<span style="color:var(--border-bright)">—</span>'}</div>
+      <div class="tl-actions">
+        <button class="tl-btn" onclick="editSession(${i})">Edit</button>
+        <button class="tl-btn del" onclick="deleteSession(${i})">✕</button>
+      </div>
     </div>
   `).reverse().join('');
+}
+
+// ─── EDIT / DELETE ────────────────────────────────────────────────────────────
+function deleteSession(index) {
+  const s = state.sessions[index];
+  // Subtract from project totals
+  state.projectTotals[s.project] = Math.max(0, (state.projectTotals[s.project] || 0) - s.duration);
+  state.sessions.splice(index, 1);
+  saveState();
+  buildProjectGrid();
+  renderTimeline();
+}
+
+function editSession(index) {
+  const s = state.sessions[index];
+  // Build modal
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'edit-modal';
+
+  const presetButtons = TASKS.map(t => `
+    <button class="tl-btn task-preset-btn" onclick="modalSelectTask('${t}', this)">${t}</button>
+  `).join('');
+
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal-title">Edit Session — ${s.project}</div>
+      <div class="modal-field">
+        <div class="modal-label">Time range</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input class="modal-input" id="edit-start" value="${fmtTime(new Date(s.start))}" style="width:90px">
+          <span style="color:var(--text-dim)">–</span>
+          <input class="modal-input" id="edit-end" value="${fmtTime(new Date(s.end))}" style="width:90px">
+        </div>
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">Task / Note</div>
+        <div class="modal-presets">${presetButtons}</div>
+        <input class="modal-input" id="edit-note" value="${s.note || ''}" placeholder="type a note...">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-small" onclick="closeEditModal()">Cancel</button>
+        <button class="btn-small" style="border-color:var(--accent);color:var(--accent)" onclick="saveEditSession(${index})">Save</button>
+      </div>
+    </div>
+  `;
+
+  // Pre-select matching preset if any
+  document.body.appendChild(overlay);
+  overlay.querySelectorAll('.task-preset-btn').forEach(btn => {
+    if (btn.textContent === s.note) btn.classList.add('selected');
+  });
+
+  // Close on overlay click
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeEditModal(); });
+}
+
+function modalSelectTask(task, btn) {
+  document.querySelectorAll('#edit-modal .task-preset-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('edit-note').value = task;
+}
+
+function closeEditModal() {
+  const m = document.getElementById('edit-modal');
+  if (m) m.remove();
+}
+
+function saveEditSession(index) {
+  const s = state.sessions[index];
+  const startInput = document.getElementById('edit-start').value;
+  const endInput = document.getElementById('edit-end').value;
+  const note = document.getElementById('edit-note').value.trim();
+
+  // Parse times against today's date
+  const baseDate = new Date(s.start);
+  const [sh, sm] = startInput.split(':').map(Number);
+  const [eh, em] = endInput.split(':').map(Number);
+  const newStart = new Date(baseDate);
+  newStart.setHours(sh, sm, 0, 0);
+  const newEnd = new Date(baseDate);
+  newEnd.setHours(eh, em, 0, 0);
+
+  if (isNaN(newStart) || isNaN(newEnd) || newEnd <= newStart) {
+    document.getElementById('edit-end').style.borderColor = 'var(--accent)';
+    return;
+  }
+
+  const oldDuration = s.duration;
+  const newDuration = newEnd.getTime() - newStart.getTime();
+
+  // Update project totals
+  state.projectTotals[s.project] = Math.max(0, (state.projectTotals[s.project] || 0) - oldDuration + newDuration);
+
+  state.sessions[index] = { ...s, start: newStart, end: newEnd, duration: newDuration, note };
+  saveState();
+  closeEditModal();
+  buildProjectGrid();
+  renderTimeline();
 }
 
 // ─── EOD SUMMARY ──────────────────────────────────────────────────────────────
@@ -1295,7 +1326,6 @@ function showEodToast() {
 function endDay() {
   if (state.activeProject) stopCurrentSession();
   buildSummary();
-  showSummaryGif();
   document.getElementById('tracker-screen').style.display = 'none';
   document.getElementById('summary-screen').style.display = 'block';
 }
